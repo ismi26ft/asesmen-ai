@@ -1,0 +1,12 @@
+<?php
+function e(mixed $value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
+function url(string $path = ''): string { return 'index.php' . ($path ? '?page=' . urlencode($path) : ''); }
+function redirect(string $path): never { header('Location: ' . url($path)); exit; }
+function flash(string $type, string $message): void { $_SESSION['flash'] = compact('type', 'message'); }
+function getFlash(): ?array { $f = $_SESSION['flash'] ?? null; unset($_SESSION['flash']); return $f; }
+function badgeClass(string $label): string { return match (strtolower($label)) { 'tuntas', 'pengayaan', 'selesai' => 'success', 'remedial', 'belum tuntas' => 'danger', 'pendampingan', 'ditinjau' => 'warning', default => 'info' }; }
+function render(string $view, array $data = []): void { extract($data); $page = $_GET['page'] ?? 'dashboard'; require BASE_PATH . 'app/views/layouts/header.php'; require BASE_PATH . "app/views/{$view}.php"; require BASE_PATH . 'app/views/layouts/footer.php'; }
+function requireLogin(): void { if (empty($_SESSION['user'])) { header('Location: login.php'); exit; } }
+function currentUser(): array { return $_SESSION['user'] ?? ['name'=>'Tamu','role'=>'Guest']; }
+function exportCsv(array $rows, string $filename): never { header('Content-Type: text/csv; charset=utf-8'); header('Content-Disposition: attachment; filename="'.$filename.'"'); $out=fopen('php://output','w'); if($rows){fputcsv($out,array_keys($rows[0])); foreach($rows as $row) fputcsv($out,$row);} fclose($out); exit; }
+function exportPdfHtml(array $rows, string $title): never { $html='<!doctype html><meta charset="utf-8"><style>body{font-family:Arial}table{border-collapse:collapse;width:100%}th,td{border:1px solid #aaa;padding:8px;text-align:left}h1{color:#333}</style><h1>'.e($title).'</h1><table><tr>'; if($rows){foreach(array_keys($rows[0]) as $h)$html.='<th>'.e($h).'</th>'; $html.='</tr>';foreach($rows as $r){$html.='<tr>';foreach($r as $v)$html.='<td>'.e($v).'</td>';$html.='</tr>';}} $html.='</table>'; $autoload=BASE_PATH.'vendor/autoload.php'; if(file_exists($autoload)){require_once $autoload; $dompdf=new \Dompdf\Dompdf();$dompdf->loadHtml($html);$dompdf->setPaper('A4','landscape');$dompdf->render();$dompdf->stream('laporan-eduinsight.pdf',['Attachment'=>true]);exit;} header('Content-Type: text/html; charset=utf-8');header('Content-Disposition: attachment; filename="laporan.html"');echo $html;exit; }
